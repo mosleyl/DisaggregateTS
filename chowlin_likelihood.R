@@ -18,7 +18,7 @@ chowlin_likelihood <- function(Y,X,vcov) {
   
   # Obtain the residuals using betaHat_0
   
-  u_l_sim <- Y - X %*% betaHat_0
+  u_l_sim <- Y - X %*% betaHat
   
   # Preconditioning for the LF function
   

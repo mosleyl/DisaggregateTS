@@ -1,10 +1,48 @@
-chowlin_likelihood <- function(Y,X,vcov) {
+chowlin <- function(Y, X, rho, aggMat, aggRatio, litterman = FALSE) {
   
   nl = dim(Y)[1]
+  n = dim(X)[1]
+  p = dim(X)[2]
+  nfull = aggRatio*nl
+  extr = n - nfull # number of extrapolations
+  
+  
+  # Generate the aggregation matrix C
+  
+  if(aggMat == 'sum'){
+    
+    C <- kronecker(diag(n_l), matrix(data = 1, nrow = 1, ncol = m))
+    C <- cbind(C, matrix(0L, nl, extr))
+    
+  }else if(aggMat == 'avg'){
+    
+    C <- kronecker(diag(n_l), matrix(data = n_l/n, nrow = 1, ncol = m))
+    C <- cbind(C, matrix(0L, nl, extr))
+    
+  }else if(aggMat == 'first'){
+    
+    C <- kronecker(diag(n_l), matrix(data = c(1, rep(0, times = m-1)), nrow = 1, ncol = m))
+    C <- cbind(C, matrix(0L, nl, extr))
+    
+  }else if(aggMat == 'last'){
+    
+    C <- kronecker(diag(n_l), matrix(data = c(rep(0, times = m-1), 1), nrow = 1, ncol = m))
+    C <- cbind(C, matrix(0L, nl, extr))
+    
+  }
+  
+  Xl = C %*% X
+  
+  if(litterman) {
+    vcov = ARcov_lit(rho, n)
+  }else {
+    vcov = ARcov(rho, n)
+  }
   
   # Simplification and Cholesky factorization of the Sigma 
   
-  Uchol <- chol(vcov)
+  vcov_agg = C %*% vcov %*% t(C)
+  Uchol <- chol(vcov_agg)
   Lchol <- t(Uchol)
   
   # Preconditioning the variables
@@ -15,19 +53,23 @@ chowlin_likelihood <- function(Y,X,vcov) {
   # Estimate betaHat_0 using GLS assuming Sigma with rho
   
   betaHat <- solve(t(X_F) %*% X_F) %*% t(X_F) %*% Y_F 
+
   
-  # Obtain the residuals using betaHat_0
+  # The distribution matrix
   
-  u_l_sim <- Y - X %*% betaHat_0
+  D <- vcov %*% t(C) %*% solve(vcov_agg)
   
-  # Preconditioning for the LF function
+  # Obtain the residuals using betaHat_1
   
-  u_l_sim_F <- solve(Lchol) %*% u_l_sim
+  u_l <- Y - C %*% X %*% betaHat  
   
-  # Calculate the likelihood function
+  # Generate the high-frequency series
   
-  LF <- -(n_l/2)*log(2*pi)-1/2*log(det(Lchol %*% Uchol)) - n_l/2 - n_l/2*log((t(u_l_sim_F) %*% u_l_sim_F)/n_l)
+  y <- X %*% betaHat + (D %*% u_l)
   
-  return(LF)
+  output = list('y' = y, betaHat = 'betaHat', 'u_l' = u_l)
+  
+
+  return(output)
   
 }

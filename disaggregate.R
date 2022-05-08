@@ -205,7 +205,7 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
     
     if(method == Chow-Lin){
       
-      fit = chowlin(Y = Y, X = Xl, vcov = C %*% ARcov(rho_opt, n) %*% t(C))
+      fit = chowlin(Y = Y, X = X, rho = rho_opt, aggMat = 'sum', aggRatio = 4)
       betaHat = fit$betaHat
       y = fit$y
       
