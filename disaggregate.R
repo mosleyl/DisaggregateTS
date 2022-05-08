@@ -7,7 +7,7 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
     
   }
   
-  if(!(method == 'Denton' || method == 'Denton-Cholette' || method == 'Chow-Lin' || method == 'Fernandez' || method == 'Litterman' || method == 'spTD' || method == 'ada-spTD')) {
+  if(!(method == 'Denton' || method == 'Denton-Cholette' || method == 'Chow-Lin' || method == 'Fernandez' || method == 'Litterman' || method == 'spTD' || method == 'adaptive-spTD')) {
     
     stop("Wrong method inputted \n")
     
@@ -50,13 +50,14 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
     
   }
   
+  Xl = C %*% X
   
   
   if(method == 'Denton-Cholette' || method == 'Denton'){
     
     # Difference between the low-frequency and the transformed high-frequency series.
     
-    u_l <- Y - C %*% X
+    u_l <- Y - Xl
     
     # First difference matrix
     
@@ -143,7 +144,7 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
     
     # Preconditioning the variables
     
-    X_F_opt <- solve(Lchol_opt) %*% C %*% X
+    X_F_opt <- solve(Lchol_opt) %*% Xl
     Y_F_opt <- solve(Lchol_opt) %*% Y  
     
     # First estimate betaHat_opt using OLS assuming Sigma = (Delta'Delta)^{-1}
@@ -152,7 +153,7 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
     
     # Obtain the residuals using betaHat_1
     
-    u_l <- Y - C %*% X %*% betaHat_opt
+    u_l <- Y - Xl %*% betaHat_opt
     
     # The distribution matrix
     
@@ -169,16 +170,49 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
     if(method == 'Chow-Lin') {
       
       Objective <- function(rho) {
-        -chowlin(
-          y = y_l, X = X_l, vcov = C %*% ARcov(rho,n) %*% t(C)
+        -chowlin_likelihood(
+          Y = Y, X = Xl, vcov = C %*% ARcov(rho,n) %*% t(C)
         )
       }
+    }else if(method == 'Litterman') {
+      
+      Objective <- function(rho) {
+        -chowlin_likelihood(
+          Y = Y, X = Xl, vcov = C %*% ARcov_lit(rho,n) %*% t(C)
+        )
+      }
+      
+    }else if(method == 'spTD' || method == 'adaptive-spTD') {
+      
+      Objective <- function(rho) {
+        sptd_BIC(
+          Y = Y, X = Xl, vcov = C %*% ARcov(rho,n) %*% t(C)
+        )
+      }
+      
     }
     
+    # optimise for best rho 
+    
+    optimise_rho <- optimize(Objective,
+                             lower = 0, upper = 0.999, tol = 1e-16,
+                             maximum = FALSE
+    )
+    
+    rho_opt = optimise_rho$minimum
+    
+    # Generate the optimal Toeplitz covariance matrix
+    
+    if(method == Chow-Lin){
+      
+      fit = chowlin(Y = Y, X = Xl, vcov = C %*% ARcov(rho_opt, n) %*% t(C))
+      betaHat = fit$betaHat
+      y = fit$y
+      
+    }
+      
   }
   
   
-  
-  
-  
+
 }
