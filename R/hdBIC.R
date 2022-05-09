@@ -1,7 +1,7 @@
 #' BIC score 
 #' 
 #' This function calculates the BIC score that has been shown to work better than ordinary BIC in 
-#' high-dimensional scenarios. It uses the variance estimator given in \insertCite{yu2019estimating;textual}{DisaggregateTS}.
+#' high-dimensional scenarios. It uses the variance estimator given in \insertCite{yu2019estimating;textual}{TSdisaggregation}.
 #' 
 #' @param X           Aggregated indicator series matrix that has been GLS rotated. 
 #' @param Y           Low-frequency response vector that has been GLS rotated. 
