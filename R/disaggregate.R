@@ -30,7 +30,7 @@
 #' @references
 #' \insertAllCited{}
 #' @importFrom Rdpack reprompt	
-#' @importFrom stats lm rbinom rnorm
+#' @importFrom stats lm rbinom rnorm optimize
 
 
 
