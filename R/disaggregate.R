@@ -1,7 +1,42 @@
-disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nrow(Y)), aggMat = 'sum', aggRatio = 4, method = 'Denton-Cholette', Denton = 'first'){
+#' Temporal Disaggregation Methods
+#' 
+#' This function contains the traditional standard-dimensional temporal disaggregation methods proposed by \insertCite{denton1971adjustment;textual}{TSdisaggregation}, \insertCite{dagum2006benchmarking;textual}{TSdisaggregation},
+#' \insertCite{chow1971best;textual}{TSdisaggregation}, \insertCite{fernandez1981methodological;textual}{TSdisaggregation} and \insertCite{litterman1983random;textual}{TSdisaggregation},
+#' and the high-dimensional methods of \insertCite{mosley2021sparse;textual}{TSdisaggregation}.
+#' 
+#' Takes in a n_l x 1 low-frequency series to be disaggregated Y and a n x p high-frequency matrix of p indicator series X. If n > n_l x aggRatio where aggRatio 
+#' is the aggregation ration (e.g. aggRatio = 4 if annual-to-quarterly disagg or aggRatio = 3 if quarterly-to-monthly disagg) then extrapolation is done
+#' to extrapolate up to n.
+#' 
+#' @param Y  		The low-frequency response series (n_l x 1 matrix).
+#' @param X  		The high-frequency indicator series (n x p matrix).
+#' @param aggMat 	Aggregation matrix according to 'first', 'sum', 'average', 'last' (default is 'sum').
+#' @param aggRatio Aggregation ratio e.g. 4 for annual-to-quarterly, 3 for quarterly-to-monthly (default is 4). 
+#' @param method 	Disaggregation method using 'Denton', 'Denton-Cholette', 'Chow-Lin', 'Fernandez', 'Litterman', 'spTD' or 'adaptive-spTD' (default is 'Chow-Lin').
+#' @param Denton	Type of differencing for Denton method: 'absolute', 'first', 'second' and 'proportional' (default is 'first'). 
+#' @return y_Est	Estimated high-frequency response series (n x 1 matrix).
+#' @return beta_Est	Estimated coefficient vector (p x 1 matrix).
+#' @return rho_Est	Estimated residual AR(1) autocorrelation parameter.
+#' @return ul_Est	Estimated aggregate residual series (n_l x 1 matrix). 
+#' @keywords Denton Denton-Cholette Chow-Lin Fernandez Litterman spTD adaptive-spTD lasso temporal-disaggregation
+#' @import Matrix lars
+#' @export
+#' @examples
+#' data = TempDisaggDGP(n_l=50,m=4,p=4,method='Chow-Lin',rho=0.5)
+#' X = data$X_Gen
+#' Y = data$Y_Gen
+#' fit_chowlin = disaggregate(Y=Y,X=X,method='Chow-Lin')
+#' y_hat = fit_chowlin$y_Est
+#' @references
+#' \insertAllCited{}
+#' @importFrom Rdpack reprompt	
+#' @importFrom stats lm rbinom rnorm
 
-  library(Matrix)
-  library(lars)
+
+
+
+disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nrow(Y)), aggMat = 'sum', aggRatio = 4, method = 'Chow-Lin', Denton = 'first'){
+
   
   if(is.matrix(X) == FALSE || is.matrix(Y) == FALSE){
     

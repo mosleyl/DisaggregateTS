@@ -1,3 +1,23 @@
+#' Function to do Chow-Lin temporal disaggregation from \insertCite{chow1971best;textual}{TSdisaggregation} and Litterman. 
+#' 
+#' Used in disaggregation.R to find estimates given the optimal rho parameter. 
+#' 
+#' @param Y  		The low-frequency response series (n_l x 1 matrix).
+#' @param X  		The high-frequency indicator series (n x p matrix).
+#' @param rho   The AR(1) residual parameter (strictly between -1 and 1).
+#' @param aggMat 	Aggregation matrix according to 'first', 'sum', 'average', 'last' (default is 'sum').
+#' @param aggRatio Aggregation ratio e.g. 4 for annual-to-quarterly, 3 for quarterly-to-monthly (default is 4). 
+#' @param litterman TRUE to use litterman vcov. FALSE for Chow-Lin vcov. Default is FALSE. 
+#' @return y	Estimated high-frequency response series (n x 1 matrix).
+#' @return betaHat	Estimated coefficient vector (p x 1 matrix).
+#' @return u_l	Estimated aggregate residual series (n_l x 1 matrix). 
+#' @keywords chow lin litterman temporal disaggregation
+#' @references
+#' \insertAllCited{}
+#' @importFrom Rdpack reprompt	
+#' @importFrom stats lm rbinom rnorm
+
+
 chowlin <- function(Y, X, rho, aggMat, aggRatio, litterman = FALSE) {
   
   n_l = dim(Y)[1]

@@ -1,3 +1,17 @@
+#' Function to calculate the BIC score from sparse temporal disaggregation.  
+#' 
+#' Used in disaggregation.R to find estimates of the optimal rho parameter. 
+#' 
+#' @param Y  		The low-frequency response series (n_l x 1 matrix).
+#' @param X  		The aggregated high-frequency indicator series (n_l x p matrix).
+#' @param vcov Aggregated variance-covariance matrix of AR(1) residuals. 
+#' @keywords chow lin litterman temporal disaggregation
+#' @references
+#' \insertAllCited{}
+#' @importFrom Rdpack reprompt	
+#' @importFrom stats lm rbinom rnorm
+
+
 sptd_BIC <- function(Y,X,vcov) {
   
   n_l = dim(Y)[1]

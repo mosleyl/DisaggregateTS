@@ -1,3 +1,12 @@
+#' Function to generate an ARIMA(1,1,0) variance-covariance matrix for the Litterman method with parameter rho s.t. |rho| < 1. 
+#'  
+#' @param rho
+#' @param n
+#' @keywords internal 
+#' @importFrom Rdpack reprompt
+#' @importFrom stats lm rbinom rnorm
+
+
 ARcov_lit <- function(rho, n) {
   
   diags <- list(rep(1, times = n), rep(-1, times = n-1))
