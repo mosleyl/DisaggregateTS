@@ -1,6 +1,6 @@
 chowlin_likelihood <- function(Y,X,vcov) {
   
-  nl = dim(Y)[1]
+  n_l = dim(Y)[1]
   
   # Simplification and Cholesky factorization of the Sigma 
   

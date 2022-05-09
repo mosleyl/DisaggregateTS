@@ -1,9 +1,9 @@
 chowlin <- function(Y, X, rho, aggMat, aggRatio, litterman = FALSE) {
   
-  nl = dim(Y)[1]
+  n_l = dim(Y)[1]
   n = dim(X)[1]
   p = dim(X)[2]
-  nfull = aggRatio*nl
+  nfull = aggRatio*n_l
   extr = n - nfull # number of extrapolations
   
   
@@ -11,27 +11,27 @@ chowlin <- function(Y, X, rho, aggMat, aggRatio, litterman = FALSE) {
   
   if(aggMat == 'sum'){
     
-    C <- kronecker(diag(n_l), matrix(data = 1, nrow = 1, ncol = m))
-    C <- cbind(C, matrix(0L, nl, extr))
+    C <- kronecker(diag(n_l), matrix(data = 1, nrow = 1, ncol = aggRatio))
+    C <- cbind(C, matrix(0L, n_l, extr))
     
   }else if(aggMat == 'avg'){
     
-    C <- kronecker(diag(n_l), matrix(data = n_l/n, nrow = 1, ncol = m))
-    C <- cbind(C, matrix(0L, nl, extr))
+    C <- kronecker(diag(n_l), matrix(data = 1/aggRatio, nrow = 1, ncol = aggRatio))
+    C <- cbind(C, matrix(0L, n_l, extr))
     
   }else if(aggMat == 'first'){
     
-    C <- kronecker(diag(n_l), matrix(data = c(1, rep(0, times = m-1)), nrow = 1, ncol = m))
-    C <- cbind(C, matrix(0L, nl, extr))
+    C <- kronecker(diag(n_l), matrix(data = c(1, rep(0, times = aggRatio-1)), nrow = 1, ncol = aggRatio))
+    C <- cbind(C, matrix(0L, n_l, extr))
     
   }else if(aggMat == 'last'){
     
-    C <- kronecker(diag(n_l), matrix(data = c(rep(0, times = m-1), 1), nrow = 1, ncol = m))
-    C <- cbind(C, matrix(0L, nl, extr))
+    C <- kronecker(diag(n_l), matrix(data = c(rep(0, times = aggRatio-1), 1), nrow = 1, ncol = aggRatio))
+    C <- cbind(C, matrix(0L, n_l, extr))
     
   }
   
-  Xl = C %*% X
+  X_l = C %*% X
   
   if(litterman) {
     vcov = ARcov_lit(rho, n)
@@ -41,13 +41,13 @@ chowlin <- function(Y, X, rho, aggMat, aggRatio, litterman = FALSE) {
   
   # Simplification and Cholesky factorization of the Sigma 
   
-  vcov_agg = C %*% vcov %*% t(C)
+  vcov_agg = forceSymmetric(C %*% vcov %*% t(C))
   Uchol <- chol(vcov_agg)
   Lchol <- t(Uchol)
   
   # Preconditioning the variables
   
-  X_F <- solve(Lchol) %*% X
+  X_F <- solve(Lchol) %*% X_l
   Y_F <- solve(Lchol) %*% Y
   
   # Estimate betaHat_0 using GLS assuming Sigma with rho
@@ -61,13 +61,13 @@ chowlin <- function(Y, X, rho, aggMat, aggRatio, litterman = FALSE) {
   
   # Obtain the residuals using betaHat_1
   
-  u_l <- Y - C %*% X %*% betaHat  
+  u_l <- Y - X_l %*% betaHat  
   
   # Generate the high-frequency series
   
   y <- X %*% betaHat + (D %*% u_l)
   
-  output = list('y' = y, betaHat = 'betaHat', 'u_l' = u_l)
+  output = list('y' = y, 'betaHat' = betaHat, 'u_l' = u_l)
   
 
   return(output)

@@ -1,5 +1,7 @@
 disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nrow(Y)), aggMat = 'sum', aggRatio = 4, method = 'Denton-Cholette', Denton = 'first'){
-  
+
+  library(Matrix)
+  library(lars)
   
   if(is.matrix(X) == FALSE || is.matrix(Y) == FALSE){
     
@@ -13,10 +15,10 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
     
   }
   
-  nl = dim(Y)[1]
+  n_l = dim(Y)[1]
   n = dim(X)[1]
   p = dim(X)[2]
-  nfull = aggRatio*nl
+  nfull = aggRatio*n_l
   extr = n - nfull # number of extrapolations
   
   if(nfull > n) {
@@ -30,34 +32,34 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
   
   if(aggMat == 'sum'){
     
-    C <- kronecker(diag(n_l), matrix(data = 1, nrow = 1, ncol = m))
-    C <- cbind(C, matrix(0L, nl, extr))
+    C <- kronecker(diag(n_l), matrix(data = 1, nrow = 1, ncol = aggRatio))
+    C <- cbind(C, matrix(0L, n_l, extr))
     
   }else if(aggMat == 'avg'){
     
-    C <- kronecker(diag(n_l), matrix(data = n_l/n, nrow = 1, ncol = m))
-    C <- cbind(C, matrix(0L, nl, extr))
+    C <- kronecker(diag(n_l), matrix(data = 1/aggRatio, nrow = 1, ncol = aggRatio))
+    C <- cbind(C, matrix(0L, n_l, extr))
     
   }else if(aggMat == 'first'){
     
-    C <- kronecker(diag(n_l), matrix(data = c(1, rep(0, times = m-1)), nrow = 1, ncol = m))
-    C <- cbind(C, matrix(0L, nl, extr))
+    C <- kronecker(diag(n_l), matrix(data = c(1, rep(0, times = aggRatio-1)), nrow = 1, ncol = aggRatio))
+    C <- cbind(C, matrix(0L, n_l, extr))
     
   }else if(aggMat == 'last'){
     
-    C <- kronecker(diag(n_l), matrix(data = c(rep(0, times = m-1), 1), nrow = 1, ncol = m))
-    C <- cbind(C, matrix(0L, nl, extr))
+    C <- kronecker(diag(n_l), matrix(data = c(rep(0, times = aggRatio-1), 1), nrow = 1, ncol = aggRatio))
+    C <- cbind(C, matrix(0L, n_l, extr))
     
   }
   
-  Xl = C %*% X
+  X_l = C %*% X
   
   
   if(method == 'Denton-Cholette' || method == 'Denton'){
     
     # Difference between the low-frequency and the transformed high-frequency series.
     
-    u_l <- Y - Xl
+    u_l <- Y - X_l
     
     # First difference matrix
     
@@ -71,31 +73,31 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
       
       if(Denton == 'abs'){
         
-        Sigma <- diag(n)
+        vcov <- diag(n)
         
         # First difference Sigma
         
       }else if(Denton == 'first'){
         
-        Sigma <- solve(Delta_t %*% Delta)
+        vcov <- solve(Delta_t %*% Delta)
         
         # Second difference Sigma
         
       }else if(Denton == 'second'){
         
-        Sigma <- solve(Delta_t %*% Delta_t %*% Delta %*% Delta) 
+        vcov <- solve(Delta_t %*% Delta_t %*% Delta %*% Delta) 
         
         # Proportional difference Sigma
         
       }else if(Denton == 'prop'){
         
-        Sigma <- solve(solve(Diagonal(n, X)) %*% Delta_t %*% Delta %*% solve(Diagonal(n, X)))
+        vcov <- solve(solve(Diagonal(n, X)) %*% Delta_t %*% Delta %*% solve(Diagonal(n, X)))
         
       }
       
       # The distribution matrix
       
-      D <- Sigma %*% t(C) %*% solve(C %*% Sigma %*% t(C))
+      D <- vcov %*% t(C) %*% solve(C %*% vcov %*% t(C))
       
       # Generate the high-frequency series
       
@@ -104,11 +106,11 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
       # Unnecessary parameter outputs
       
       rho_opt <- NaN
-      betaHat_opt <- NaN
+      betaHat <- NaN
       
     }else if(method == 'Denton-Cholette'){
       
-      # Removed the first roq of the Delta matrix
+      # Removed the first row of the Delta matrix
       
       Delta_DC <- Delta[2: nrow(Delta), ]
       
@@ -123,7 +125,7 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
       # Unnecessary parameter outputs
       
       rho_opt <- NaN
-      betaHat_opt <- NaN
+      betaHat <- NaN
       
     }
     
@@ -135,33 +137,34 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
     
     # H(rho) matrix is first an nxn identity matrix
     
-    Sigma_opt <- solve(Delta_t %*% Delta)
+    vcov <- solve(Delta_t %*% Delta)
+    vcov_agg <- C %*% vcov %*% t(C)
     
     # Simplification and Cholesky factorization of the Sigma_opt 
     
-    Uchol_opt <- chol(C %*% Sigma_opt %*% t(C))
-    Lchol_opt <- t(Uchol_opt)
+    Uchol <- chol(vcov_agg)
+    Lchol <- t(Uchol)
     
     # Preconditioning the variables
     
-    X_F_opt <- solve(Lchol_opt) %*% Xl
-    Y_F_opt <- solve(Lchol_opt) %*% Y  
+    X_F <- solve(Lchol) %*% X_l
+    Y_F <- solve(Lchol) %*% Y  
     
     # First estimate betaHat_opt using OLS assuming Sigma = (Delta'Delta)^{-1}
     
-    betaHat_opt <- solve(t(X_F_opt) %*% X_F_opt) %*% t(X_F_opt) %*% Y_F_opt 
+    betaHat <- solve(t(X_F) %*% X_F) %*% t(X_F) %*% Y_F 
     
     # Obtain the residuals using betaHat_1
     
-    u_l <- Y - Xl %*% betaHat_opt
+    u_l <- Y - X_l %*% betaHat
     
     # The distribution matrix
     
-    D <- Sigma %*% t(C) %*% solve(C %*% Sigma %*% t(C))
+    D <- vcov %*% t(C) %*% solve(vcov_agg)
     
     # Generate the high-frequency series
     
-    y <- X %*% betaHat_opt + (D %*% u_l)
+    y <- X %*% betaHat + (D %*% u_l)
     
     rho_opt <- NaN
     
@@ -171,22 +174,22 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
       
       Objective <- function(rho) {
         -chowlin_likelihood(
-          Y = Y, X = Xl, vcov = C %*% ARcov(rho,n) %*% t(C)
+          Y = Y, X = X_l, vcov = C %*% ARcov(rho,n) %*% t(C)
         )
       }
     }else if(method == 'Litterman') {
       
       Objective <- function(rho) {
-        -chowlin_likelihood(
-          Y = Y, X = Xl, vcov = C %*% ARcov_lit(rho,n) %*% t(C)
-        )
+        -as.numeric(chowlin_likelihood(
+          Y = Y, X = X_l, vcov = forceSymmetric(C %*% ARcov_lit(rho,n) %*% t(C))
+        ))
       }
       
     }else if(method == 'spTD' || method == 'adaptive-spTD') {
       
       Objective <- function(rho) {
         sptd_BIC(
-          Y = Y, X = Xl, vcov = C %*% ARcov(rho,n) %*% t(C)
+          Y = Y, X = X_l, vcov = C %*% ARcov(rho,n) %*% t(C)
         )
       }
       
@@ -203,16 +206,42 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
     
     # Generate the optimal Toeplitz covariance matrix
     
-    if(method == Chow-Lin){
+    if(method == 'Chow-Lin'){
       
-      fit = chowlin(Y = Y, X = X, rho = rho_opt, aggMat = 'sum', aggRatio = 4)
+      fit = chowlin(Y = Y, X = X, rho = rho_opt, aggMat = aggMat, aggRatio = aggRatio, litterman = FALSE)
       betaHat = fit$betaHat
       y = fit$y
+      u_l = fit$u_l
+      
+    }else if(method == 'Litterman'){
+      
+      fit = chowlin(Y = Y, X = X, rho = rho_opt, aggMat = aggMat, aggRatio = aggRatio, litterman = TRUE)
+      betaHat = fit$betaHat
+      y = fit$y
+      u_l = fit$u_l
+      
+    }else if(method == 'spTD'){
+      
+      fit = sptd(Y = Y, X = X, rho = rho_opt, aggMat = aggMat, aggRatio = aggRatio, adaptive = FALSE)
+      betaHat = fit$betaHat
+      y = fit$y
+      u_l = fit$u_l
+      
+    }else if(method == 'adaptive-spTD'){
+      
+      fit = sptd(Y = Y, X = X, rho = rho_opt, aggMat = aggMat, aggRatio = aggRatio, adaptive = TRUE)
+      betaHat = fit$betaHat
+      y = fit$y
+      u_l = fit$u_l
       
     }
       
   }
   
+  data_list <- list(y, betaHat, rho_opt, u_l)
+  names(data_list) <- c("y_Est", "beta_Est", "rho_Est","ul_est")
+  
+  return(data_list)
   
 
 }

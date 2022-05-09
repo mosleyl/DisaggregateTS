@@ -1,6 +1,6 @@
 sptd_BIC <- function(Y,X,vcov) {
   
-  nl = dim(Y)[1]
+  n_l = dim(Y)[1]
   
   # Simplification and Cholesky factorization of the Sigma 
   
@@ -14,11 +14,11 @@ sptd_BIC <- function(Y,X,vcov) {
   
   
   # Fit LARS algorithm to the data 
-  lars.fit <- lars(X_F, Y_F, intercept = F, normalize = T)
+  lars.fit <- lars(X_F, Y_F, intercept = F, normalize = F)
   betamat <- lars.fit$beta 
   
   # Don't allow support to be bigger than n_l/2
-  npath <- k.index(betamat, nl)
+  npath <- k.index(betamat, n_l)
   
   # Find BIC for each re-fitted betahat 
   beta_refit <- list()
