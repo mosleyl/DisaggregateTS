@@ -22,7 +22,7 @@
 #' @import Matrix lars
 #' @export
 #' @examples
-#' data = TempDisaggDGP(n_l=50,m=4,p=4,method='Chow-Lin',rho=0.5)
+#' data = TempDisaggDGP(n_l=25,n=100,p=10,rho=0.5)
 #' X = data$X_Gen
 #' Y = data$Y_Gen
 #' fit_chowlin = disaggregate(Y=Y,X=X,method='Chow-Lin')
