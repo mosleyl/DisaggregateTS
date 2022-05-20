@@ -34,7 +34,7 @@ chowlin <- function(Y, X, rho, aggMat, aggRatio, litterman = FALSE) {
     C <- kronecker(diag(n_l), matrix(data = 1, nrow = 1, ncol = aggRatio))
     C <- cbind(C, matrix(0L, n_l, extr))
     
-  }else if(aggMat == 'avg'){
+  }else if(aggMat == 'average'){
     
     C <- kronecker(diag(n_l), matrix(data = 1/aggRatio, nrow = 1, ncol = aggRatio))
     C <- cbind(C, matrix(0L, n_l, extr))
