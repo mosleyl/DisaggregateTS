@@ -1,4 +1,4 @@
-# TSdisaggregation
+# DisaggregateTS
 Methods to perform temporal disaggregation and extrapolation.
 
 MAIN FUNCTION: disaggregate.R
