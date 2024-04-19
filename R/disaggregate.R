@@ -1,8 +1,8 @@
 #' Temporal Disaggregation Methods
 #' 
-#' This function contains the traditional standard-dimensional temporal disaggregation methods proposed by \insertCite{denton1971adjustment;textual}{TSdisaggregation}, \insertCite{dagum2006benchmarking;textual}{TSdisaggregation},
-#' \insertCite{chow1971best;textual}{TSdisaggregation}, \insertCite{fernandez1981methodological;textual}{TSdisaggregation} and \insertCite{litterman1983random;textual}{TSdisaggregation},
-#' and the high-dimensional methods of \insertCite{mosley2021sparse;textual}{TSdisaggregation}.
+#' This function contains the traditional standard-dimensional temporal disaggregation methods proposed by \insertCite{denton1971adjustment;textual}{DisaggregateTS}, \insertCite{dagum2006benchmarking;textual}{DisaggregateTS},
+#' \insertCite{chow1971best;textual}{DisaggregateTS}, \insertCite{fernandez1981methodological;textual}{DisaggregateTS} and \insertCite{litterman1983random;textual}{DisaggregateTS},
+#' and the high-dimensional methods of \insertCite{mosley2021sparse;textual}{DisaggregateTS}.
 #' 
 #' Takes in a n_l x 1 low-frequency series to be disaggregated Y and a n x p high-frequency matrix of p indicator series X. If n > n_l x aggRatio where aggRatio 
 #' is the aggregation ration (e.g. aggRatio = 4 if annual-to-quarterly disagg or aggRatio = 3 if quarterly-to-monthly disagg) then extrapolation is done
@@ -13,7 +13,7 @@
 #' @param aggMat 	Aggregation matrix according to 'first', 'sum', 'average', 'last' (default is 'sum').
 #' @param aggRatio Aggregation ratio e.g. 4 for annual-to-quarterly, 3 for quarterly-to-monthly (default is 4). 
 #' @param method 	Disaggregation method using 'Denton', 'Denton-Cholette', 'Chow-Lin', 'Fernandez', 'Litterman', 'spTD' or 'adaptive-spTD' (default is 'Chow-Lin').
-#' @param Denton	Type of differencing for Denton method: 'absolute', 'first', 'second' and 'proportional' (default is 'first'). 
+#' @param Denton	Type of differencing for Denton method: 'absolute', 'first', 'second', 'proportional-first' and 'proportional-second' (default is 'first'). 
 #' @return y_Est	Estimated high-frequency response series (n x 1 matrix).
 #' @return beta_Est	Estimated coefficient vector (p x 1 matrix).
 #' @return rho_Est	Estimated residual AR(1) autocorrelation parameter.
@@ -35,7 +35,7 @@
 
 
 
-disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nrow(Y)), aggMat = 'sum', aggRatio = 4, method = 'Chow-Lin', Denton = 'first'){
+disaggregate2 <- function(Y, X = matrix(data = rep(1, times = (nrow(Y)*aggRatio)), nrow = (nrow(Y)*aggRatio)), aggMat = 'sum', aggRatio = 4, method = 'Chow-Lin', Denton = 'first'){
 
   
   if(is.matrix(X) == FALSE || is.matrix(Y) == FALSE){
@@ -92,43 +92,43 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
   
   if(method == 'Denton-Cholette' || method == 'Denton'){
     
+    if(dim(as.matrix(X))[2] > 1){
+      stop("X has more than 1 indicator. The Denton/Denton-Cholette methods requires only one indicator. \n")
+    }
+    
+    if(!(Denton == 'absolute' || Denton == 'first' || Denton == 'second' || Denton == 'proportional-first' || Denton == 'proportional-second')){
+      stop("Wrong Denton method inputted.")
+    }
+    
     # Difference between the low-frequency and the transformed high-frequency series.
     
     u_l <- Y - X_l
     
     # First difference matrix
     
+    Delta_0 <- diag(n)
+
     diags <- list(rep(1, times = n), rep(-1, times = n-1))
     Delta_t <-  bandSparse(n, k = 0:1, diagonals = diags, symmetric = FALSE)
     Delta <- t(Delta_t)
     
+    X_inv <- diag(1 / (as.numeric(X) / mean(X)))
+    
+    if(method == 'absolute'){
+      Delta_0 = Delta_0
+    }else if(Denton == 'first'){
+      Delta_0 = Delta
+    }else if(Denton == 'second'){
+      Delta_0 = t(Delta) %*% Delta
+    }else if(Denton == 'proportional_first'){
+      Delta_0 = Delta %*% X_inv
+    }else{
+      Delta_0 = t(Delta) %*% Delta %*% X_inv
+    }
+    
     if(method == 'Denton'){
       
-      # Absolute difference matrix
-      
-      if(Denton == 'abs'){
-        
-        vcov <- diag(n)
-        
-        # First difference Sigma
-        
-      }else if(Denton == 'first'){
-        
-        vcov <- solve(Delta_t %*% Delta)
-        
-        # Second difference Sigma
-        
-      }else if(Denton == 'second'){
-        
-        vcov <- solve(Delta_t %*% Delta_t %*% Delta %*% Delta) 
-        
-        # Proportional difference Sigma
-        
-      }else if(Denton == 'prop'){
-        
-        vcov <- solve(solve(Diagonal(n, X)) %*% Delta_t %*% Delta %*% solve(Diagonal(n, X)))
-        
-      }
+      vcov = solve(t(Delta_0) %*% Delta_0)
       
       # The distribution matrix
       
@@ -145,17 +145,25 @@ disaggregate <- function(Y, X = matrix(data = rep(1, times = nrow(Y)), nrow = nr
       
     }else if(method == 'Denton-Cholette'){
       
-      # Removed the first row of the Delta matrix
+      if(Denton == 'absolute'){
+        Delta_1 = Delta_0
+      }else if(Denton == 'first' || Denton == 'proportional-first'){
+        Delta_1 = Delta_0[-1,]
+      }else{
+        Delta_1 = Delta_0[-(1:2),]
+      }
       
-      Delta_DC <- Delta[2: nrow(Delta), ]
+      D1 = t(Delta_1) %*% Delta_1
       
-      # The distribution matrix
+      # Eq. (2.2) from Denton (1971); Eq (6.8) from Cholette and Dagum (2006)
+      y <- solve(
+        rbind(cbind(D1, t(C)), cbind(C, matrix(0, nrow = n_l, ncol = n_l)))
+      ) %*% rbind(
+        cbind(D1, matrix(0, nrow = n, ncol = n_l)),
+        cbind(C, diag(1, nrow = n_l, ncol = n_l))
+      ) %*% matrix(c(X, u_l))
       
-      D <- Delta_DC
-      
-      # Generate the high-frequency series
-      
-      y <- X + (D %*% u_l) 
+      y <- y[1:n]
       
       # Unnecessary parameter outputs
       
