@@ -6,7 +6,7 @@
 #' @param X           Aggregated indicator series matrix that has been GLS rotated. 
 #' @param Y           Low-frequency response vector that has been GLS rotated. 
 #' @param covariance  Aggregated AR covariance matrix. 
-#' @param beta        Estimate of beta from LARS algorithm for a certain lambda.
+#' @param beta        Estimate of beta from LARS algorithm for a certain \eqn{\lambda}.
 #' @keywords internal 
 #' @references 
 #' \insertAllCited{}

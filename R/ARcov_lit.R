@@ -1,4 +1,4 @@
-#' Function to generate an ARIMA(1,1,0) variance-covariance matrix for the Litterman method with parameter rho s.t. |rho| < 1. 
+#' Function to generate an ARIMA(\eqn{1,1,0}) variance-covariance matrix for the Litterman method with parameter \eqn{\rho} s.t. \eqn{\lvert \rho\rvert < 1}. 
 #'  
 #' @param rho
 #' @param n
@@ -24,5 +24,3 @@ ARcov_lit <- function(rho, n) {
   return(Sigma)
   
 }
-
-

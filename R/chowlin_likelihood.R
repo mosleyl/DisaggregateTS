@@ -1,13 +1,11 @@
 #' Likelihood function from Chow-Lin or Litterman temporal disaggregation.  
 #' 
-#' Used in disaggregation.R to find estimates of the optimal rho parameter. 
+#' Used in \code{\link{disaggregation_rev}} to find estimates of the optimal \eqn{\rho} parameter. 
 #' 
-#' @param Y  		The low-frequency response series (n_l x 1 matrix).
-#' @param X  		The aggregated high-frequency indicator series (n_l x p matrix).
+#' @param Y  		The low-frequency response series (\eqn{n_l \times 1} matrix).
+#' @param X  		The aggregated high-frequency indicator series (\eqn{n_l \times p} matrix).
 #' @param vcov Aggregated variance-covariance matrix of Chow-Lin or Litterman residuals. 
 #' @keywords chow lin litterman temporal disaggregation
-#' @references
-#' \insertAllCited{}
 #' @importFrom Rdpack reprompt	
 #' @importFrom stats lm rbinom rnorm
 

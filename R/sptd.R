@@ -1,16 +1,16 @@
 #' Function to do sparse temporal disaggregation from \insertCite{mosley2021sparse;textual}{TSdisaggregation}. 
 #' 
-#' Used in disaggregation.R to find estimates given the optimal rho parameter. 
+#' Used in \code{\link{disaggregation_rev}} to find estimates given the optimal rho parameter. 
 #' 
-#' @param Y  		The low-frequency response series (n_l x 1 matrix).
-#' @param X  		The high-frequency indicator series (n x p matrix).
-#' @param rho   The AR(1) residual parameter (strictly between -1 and 1).
+#' @param Y  		The low-frequency response series (\eqn{n_l \times 1} matrix).
+#' @param X  		The high-frequency indicator series (\eqn{n \times p} matrix).
+#' @param rho   The AR(\eqn{1}) residual parameter (strictly between \eqn{-1} and \eqn{1}).
 #' @param aggMat 	Aggregation matrix according to 'first', 'sum', 'average', 'last' (default is 'sum').
 #' @param aggRatio Aggregation ratio e.g. 4 for annual-to-quarterly, 3 for quarterly-to-monthly (default is 4). 
 #' @param adaptive TRUE to use adaptive lasso penalty. FALSE for lasso penalty. Default is FALSE. 
-#' @return y	Estimated high-frequency response series (n x 1 matrix).
-#' @return betaHat	Estimated coefficient vector (p x 1 matrix).
-#' @return u_l	Estimated aggregate residual series (n_l x 1 matrix). 
+#' @return \code{y}:	Estimated high-frequency response series (output is an \eqn{n \times 1} matrix).
+#' @return \code{betaHat}:	Estimated coefficient vector (output is a \eqn{p \times 1} matrix).
+#' @return \code{u_l}:	Estimated aggregate residual series (output is an \eqn{n_l \times 1} matrix). 
 #' @keywords sparse lasso temporal disaggregation
 #' @references
 #' \insertAllCited{}

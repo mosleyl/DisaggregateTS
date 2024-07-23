@@ -1,6 +1,6 @@
 #' Index of support for LARS algorithm when in high-dimensions 
 #' 
-#' This function prevents the support of beta becoming greater than n_l/2.
+#' This function prevents the support of beta becoming greater than \eqn{n_l/2}.
 #' This heuristic approach prevents erratic values of BIC when in high-dimensions. 
 #' 
 #' @param matrix

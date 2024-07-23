@@ -5,7 +5,7 @@
 #' 
 #' @param X     Aggregated indicator series matrix that has been GLS rotated. 
 #' @param Y     Low-frequency response vector that has been GLS rotated. 
-#' @param beta  Estimate of beta from LARS algorithm for a certain lambda.
+#' @param beta  Estimate of beta from LARS algorithm for a certain \eqn{\lambda}.
 #' @keywords internal 
 #' @importFrom Rdpack reprompt
 #' @importFrom stats lm rbinom rnorm

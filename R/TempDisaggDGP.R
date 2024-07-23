@@ -22,11 +22,11 @@
 #' @param sd_e		Standard deviation of the errors. Default is 1. 
 #' @param simul     When 'TRUE' the design matrix and the coefficient vector are fixed.
 #' @param setSeed	The seed used when 'simul' is set to 'TRUE'. 
-#' @return y_Gen	Generated high-frequency response series.
-#' @return Y_Gen	Generated low-frequency response series.
-#' @return X_Gen	Generated high-frequency indicator series.
-#' @return Beta_Gen	Generated coefficient vector.
-#' @return e_Gen	Generated high-frequency residual series. 
+#' @return \code{y_Gen}:	Generated high-frequency response series (output is an \eqn{n \times 1} matrix).
+#' @return \code{Y_Gen}:	Generated low-frequency response series (output is an \eqn{n_l \times 1} matrix).
+#' @return \code{X_Gen}:	Generated high-frequency indicator series (output is a \eqn{n \times p} matrix).
+#' @return \code{Beta_Gen}:	Generated coefficient vector (output is a \eqn{p \times 1} matrix).
+#' @return \code{e_Gen}:	Generated high-frequency residual series (output is a \eqn{n \times 1} matrix). 
 #' @keywords DGP sparse high-frequency low-frequency 
 #' @import zoo withr
 #' @export
@@ -40,215 +40,215 @@
 #' @importFrom stats lm rbinom rnorm
 
 TempDisaggDGP <- function(n_l, n, aggRatio = 4, p = 1, beta = 1, sparsity = 1, method = 'Chow-Lin', aggMat = 'sum', rho = 0, mean_X = 0, sd_X = 1, sd_e = 1, simul = FALSE, setSeed = 42){
-
-
-	if(rho >= 1 || rho <= -1){
-
-		stop("For the Chow-Lin method 'rho' < |1| and for the Litterman method 'rho' corresponds to the autocorrelation of the errors of the random walk, where 'rho' < |1|! \n")
-
-	}else{
-
-		# Generate the random vector of coefficients for the DGP with +beta and -beta with equal probability.
-
-		if(simul == TRUE){
-
-			w <- with_seed(setSeed, matrix(data = rbinom(n = p, size = 1, prob = 0.5), ncol = 1))
-
-		}else{
-
-			w <- matrix(data = rbinom(n = p, size = 1, prob = 0.5), ncol = 1)			
-
-		}
-
-		beta <- w*beta-(1-w)*beta
-
-		if(sparsity != 1){
-
-			if(sparsity > 1){
-
-				stop("The 'sparsity' input can only take values in (0,1].\n")
-
-			}else{
-
-				s <- round(sparsity*p)					
-
-				if(simul == TRUE){
-
-					toReplace <- with_seed(setSeed, sample(p, size = s))
-
-				}else{
-
-					toReplace <- sample(p, size = s)
-
-				}
-
-				beta <- replace(beta, list = toReplace, values = 0)
-
-			}
-
-		}
-
-		if(method == 'Denton-Cholette'){
-
-			if(p > 1){
-
-				stop("For the Denton-Cholette method p = 1! \n")
-
-			}else{
-
-				# Generate the random vector of indicator series.
-
-				if(simul == TRUE){
-
-					X <- with_seed(setSeed, matrix(data = rnorm(n, mean = mean_X, sd = sd_X), ncol = 1))
-
-				}else{
-
-					X <- matrix(data = rnorm(n, mean = mean_X, sd = sd_X), ncol = 1)
-
-				}
-
-			}
-
-		}else{
-
-			# Generate the random p-columned matrix of indicator series. 
-
-			if(simul == TRUE){
-
-				X <- with_seed(setSeed, matrix(data = rnorm (n * p, mean = mean_X, sd = sd_X), ncol = p, nrow = n))
-
-			}else{
-
-				X <- matrix(data = rnorm (n * p, mean = mean_X, sd = sd_X), ncol = p, nrow = n)
-
-			}
-			
-		}	
-
-		if(method == 'Denton-Cholette'){
-
-		# Generate the high-frequency series according to a normal distribution with some random indicators.
-
-			# Generate the purturbations. 
-
-			e <- matrix(data = rnorm(n, mean = 0, sd = sd_e), ncol = 1) 
-
-			# Generate the high-frequency series by y = X + e.
-
-			y <- matrix(data = (X + e), ncol = 1) 
-
-			# Beta = 1 for the Denton-Cholette method
-
-			beta <- 1
-
-		}else if(method == 'Chow-Lin'){
-
-		# Generate the high-frequency series with autocorrelated errors according to a normal distribution with some random indicators.
-
-			# Generate the autocorrelated purturbations with the autocorrelation coefficient rho.
-
-			e <- matrix(data = 0, nrow = n)
-
-			e[1] <- rnorm(1, mean = 0, sd = 1)/sqrt(1-rho^2)
-
-			for(i in 2:nrow(e)){
-
-				u <- rnorm(1, mean = 0, sd = 1)
-
-				e[i] <- rho * e[i-1] + u 
-
-			}
-
-			# Generate the high-frequency series by y = XB + e.
-
-			y <- matrix(data = (X %*% beta + e), ncol = 1) 
-
-
-
-		}else if(method == 'Fernandez' || method == 'Litterman'){
-
-			if(method == 'Fernandez'){
-
-				rho <- 0
-
-			}
-
-		# Generate the high-frequency series with errors exhibiting random walk and potentially autocorrelated errors, according to a normal distribution with some random indicators.
-
-			# Generate the random vector of coefficients for the DGP.
-
-			# Generate the purturbations exhibiting a random walk model.
-
-			e <- matrix(data = 0, nrow = n)
-
-			u <- matrix(data = 0, nrow = n)
-
-			e[1] <- rnorm(1, mean = 0, sd = 1)
-
-			u[1] <- rnorm(1, mean = 0, sd = 1)/sqrt(1-rho^2)
-
-			for(i in 2:nrow(e)){
-
-				nu <- rnorm(1, mean = 0, sd = 1)
-
-				u[i] <- rho * u[i-1] + nu
-
-				e[i] <- e[i-1] + u[i]
-
-			}
-
-			# Generate the high-frequency series by y = XB + e.
-
-			y <- matrix(data = (X %*% beta + e), ncol = 1) 
-
-
-		}
-		
-		
-		nfull = aggRatio*n_l
-		extr = n - nfull # number of extrapolations
-		
-		if(nfull > n) {
-		  
-		  stop("X does not have enough observations. \n")
-		  
-		}
-		
-		
-		# Generate the aggregation matrix C
-		
-		if(aggMat == 'sum'){
-		  
-		  C <- kronecker(diag(n_l), matrix(data = 1, nrow = 1, ncol = aggRatio))
-		  C <- cbind(C, matrix(0L, n_l, extr))
-		  
-		}else if(aggMat == 'average'){
-		  
-		  C <- kronecker(diag(n_l), matrix(data = 1/aggRatio, nrow = 1, ncol = aggRatio))
-		  C <- cbind(C, matrix(0L, n_l, extr))
-		  
-		}else if(aggMat == 'first'){
-		  
-		  C <- kronecker(diag(n_l), matrix(data = c(1, rep(0, times = aggRatio-1)), nrow = 1, ncol = aggRatio))
-		  C <- cbind(C, matrix(0L, n_l, extr))
-		  
-		}else if(aggMat == 'last'){
-		  
-		  C <- kronecker(diag(n_l), matrix(data = c(rep(0, times = aggRatio-1), 1), nrow = 1, ncol = aggRatio))
-		  C <- cbind(C, matrix(0L, n_l, extr))
-		  
-		}
-		
-		Y = C %*% y
-
-
-		#Store the output
-
-		data_list <- list(y, Y, X, beta, e)
-		names(data_list) <- c("y_Gen", "Y_Gen", "X_Gen", "Beta_Gen", "e_Gen")
-	
-		return(data_list)
-
-	}
+  
+  
+  if(rho >= 1 || rho <= -1){
+    
+    stop("For the Chow-Lin method 'rho' < |1| and for the Litterman method 'rho' corresponds to the autocorrelation of the errors of the random walk, where 'rho' < |1|! \n")
+    
+  }else{
+    
+    # Generate the random vector of coefficients for the DGP with +beta and -beta with equal probability.
+    
+    if(simul == TRUE){
+      
+      w <- with_seed(setSeed, matrix(data = rbinom(n = p, size = 1, prob = 0.5), ncol = 1))
+      
+    }else{
+      
+      w <- matrix(data = rbinom(n = p, size = 1, prob = 0.5), ncol = 1)			
+      
+    }
+    
+    beta <- w*beta-(1-w)*beta
+    
+    if(sparsity != 1){
+      
+      if(sparsity > 1){
+        
+        stop("The 'sparsity' input can only take values in (0,1].\n")
+        
+      }else{
+        
+        s <- round(sparsity*p)					
+        
+        if(simul == TRUE){
+          
+          toReplace <- with_seed(setSeed, sample(p, size = s))
+          
+        }else{
+          
+          toReplace <- sample(p, size = s)
+          
+        }
+        
+        beta <- replace(beta, list = toReplace, values = 0)
+        
+      }
+      
+    }
+    
+    if(method == 'Denton-Cholette'){
+      
+      if(p > 1){
+        
+        stop("For the Denton-Cholette method p = 1! \n")
+        
+      }else{
+        
+        # Generate the random vector of indicator series.
+        
+        if(simul == TRUE){
+          
+          X <- with_seed(setSeed, matrix(data = rnorm(n, mean = mean_X, sd = sd_X), ncol = 1))
+          
+        }else{
+          
+          X <- matrix(data = rnorm(n, mean = mean_X, sd = sd_X), ncol = 1)
+          
+        }
+        
+      }
+      
+    }else{
+      
+      # Generate the random p-columned matrix of indicator series. 
+      
+      if(simul == TRUE){
+        
+        X <- with_seed(setSeed, matrix(data = rnorm (n * p, mean = mean_X, sd = sd_X), ncol = p, nrow = n))
+        
+      }else{
+        
+        X <- matrix(data = rnorm (n * p, mean = mean_X, sd = sd_X), ncol = p, nrow = n)
+        
+      }
+      
+    }	
+    
+    if(method == 'Denton-Cholette'){
+      
+      # Generate the high-frequency series according to a normal distribution with some random indicators.
+      
+      # Generate the purturbations. 
+      
+      e <- matrix(data = rnorm(n, mean = 0, sd = sd_e), ncol = 1) 
+      
+      # Generate the high-frequency series by y = X + e.
+      
+      y <- matrix(data = (X + e), ncol = 1) 
+      
+      # Beta = 1 for the Denton-Cholette method
+      
+      beta <- 1
+      
+    }else if(method == 'Chow-Lin'){
+      
+      # Generate the high-frequency series with autocorrelated errors according to a normal distribution with some random indicators.
+      
+      # Generate the autocorrelated purturbations with the autocorrelation coefficient rho.
+      
+      e <- matrix(data = 0, nrow = n)
+      
+      e[1] <- rnorm(1, mean = 0, sd = 1)/sqrt(1-rho^2)
+      
+      for(i in 2:nrow(e)){
+        
+        u <- rnorm(1, mean = 0, sd = 1)
+        
+        e[i] <- rho * e[i-1] + u 
+        
+      }
+      
+      # Generate the high-frequency series by y = XB + e.
+      
+      y <- matrix(data = (X %*% beta + e), ncol = 1) 
+      
+      
+      
+    }else if(method == 'Fernandez' || method == 'Litterman'){
+      
+      if(method == 'Fernandez'){
+        
+        rho <- 0
+        
+      }
+      
+      # Generate the high-frequency series with errors exhibiting random walk and potentially autocorrelated errors, according to a normal distribution with some random indicators.
+      
+      # Generate the random vector of coefficients for the DGP.
+      
+      # Generate the purturbations exhibiting a random walk model.
+      
+      e <- matrix(data = 0, nrow = n)
+      
+      u <- matrix(data = 0, nrow = n)
+      
+      e[1] <- rnorm(1, mean = 0, sd = 1)
+      
+      u[1] <- rnorm(1, mean = 0, sd = 1)/sqrt(1-rho^2)
+      
+      for(i in 2:nrow(e)){
+        
+        nu <- rnorm(1, mean = 0, sd = 1)
+        
+        u[i] <- rho * u[i-1] + nu
+        
+        e[i] <- e[i-1] + u[i]
+        
+      }
+      
+      # Generate the high-frequency series by y = XB + e.
+      
+      y <- matrix(data = (X %*% beta + e), ncol = 1) 
+      
+      
+    }
+    
+    
+    nfull = aggRatio*n_l
+    extr = n - nfull # number of extrapolations
+    
+    if(nfull > n) {
+      
+      stop("X does not have enough observations. \n")
+      
+    }
+    
+    
+    # Generate the aggregation matrix C
+    
+    if(aggMat == 'sum'){
+      
+      C <- kronecker(diag(n_l), matrix(data = 1, nrow = 1, ncol = aggRatio))
+      C <- cbind(C, matrix(0L, n_l, extr))
+      
+    }else if(aggMat == 'average'){
+      
+      C <- kronecker(diag(n_l), matrix(data = 1/aggRatio, nrow = 1, ncol = aggRatio))
+      C <- cbind(C, matrix(0L, n_l, extr))
+      
+    }else if(aggMat == 'first'){
+      
+      C <- kronecker(diag(n_l), matrix(data = c(1, rep(0, times = aggRatio-1)), nrow = 1, ncol = aggRatio))
+      C <- cbind(C, matrix(0L, n_l, extr))
+      
+    }else if(aggMat == 'last'){
+      
+      C <- kronecker(diag(n_l), matrix(data = c(rep(0, times = aggRatio-1), 1), nrow = 1, ncol = aggRatio))
+      C <- cbind(C, matrix(0L, n_l, extr))
+      
+    }
+    
+    Y = C %*% y
+    
+    
+    #Store the output
+    
+    data_list <- list(y, Y, X, beta, e)
+    names(data_list) <- c("y_Gen", "Y_Gen", "X_Gen", "Beta_Gen", "e_Gen")
+    
+    return(data_list)
+    
+  }
 }
