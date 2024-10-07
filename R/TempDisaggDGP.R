@@ -42,240 +42,121 @@
 #' @importFrom stats lm rbinom rnorm
 
 TempDisaggDGP <- function(n_l, n, aggRatio = 4, p = 1, beta = 1, sparsity = 1, method = 'Chow-Lin', aggMat = 'sum', rho = 0, mean_X = 0, sd_X = 1, sd_e = 1, simul = FALSE, sparse_option = "random", setSeed = 42){
-  
-  
-  if(rho >= 1 || rho <= -1){
-    
-    stop("For the Chow-Lin method 'rho' < |1| and for the Litterman method 'rho' corresponds to the autocorrelation of the errors of the random walk, where 'rho' < |1|! \n")
-    
-  }else{
-    
-    # Generate the random vector of coefficients for the DGP with +beta and -beta with equal probability.
-    
-    if(simul == TRUE){
-      
-      w <- with_seed(setSeed, matrix(data = rbinom(n = p, size = 1, prob = 0.5), ncol = 1))
 
-    }else{
-      
-      w <- matrix(data = rbinom(n = p, size = 1, prob = 0.5), ncol = 1)
-      
-    }
-    
-    beta <- w * beta- (1-w) * beta
-    
-    if(sparse_option == "random"){
-    
-      if(sparsity != 1){
-        
-        if(sparsity > 1){
-          
-          stop("The 'sparsity' input can only take values in (0,1].\n")
-          
-        }else{
-          
-          s <- round(sparsity*p)					
-          
-          if(simul == TRUE){
-            
-            toReplace <- with_seed(setSeed, sample(p, size = s))
-            
-          }else{
-            
-            toReplace <- sample(p, size = s)
-            
-          }
-          
-          beta <- replace(beta, list = toReplace, values = 0)
-          
-        }
-      
-      }
-
-    }else{
-      
-      if(sparse_option != "random" && (is.numeric(sparse_option) && sparse_option == as.integer(sparse_option))) {
-        
-        if(sparse_option > p){
-          
-          stop("The 'sparse_option' integer input should be less than or equal to 'p'")
-          
-        }else{
-        
-          toReplace <- (length(beta) - sparse_option + 1):length(beta)
-          beta <- replace(beta, list = toReplace, values = 0) 
-          
-        }
-      
-      } else {
-      
-        stop("If 'sparse_option' is not set to 'random', then it should be an integer.")
-      
-      }
-      
-    }
-    
-    if(method == 'Denton-Cholette'){
-      
-      if(p > 1){
-        
-        stop("For the Denton-Cholette method p = 1! \n")
-        
-      }else{
-        
-        # Generate the random vector of indicator series.
-        
-        if(simul == TRUE){
-          
-          X <- with_seed(setSeed, matrix(data = rnorm(n, mean = mean_X, sd = sd_X), ncol = 1))
-          
-        }else{
-          
-          X <- matrix(data = rnorm(n, mean = mean_X, sd = sd_X), ncol = 1)
-          
-        }
-        
-      }
-      
-    }else{
-      
-      # Generate the random p-columned matrix of indicator series. 
-      
-      if(simul == TRUE){
-        
-        X <- with_seed(setSeed, matrix(data = rnorm (n * p, mean = mean_X, sd = sd_X), ncol = p, nrow = n))
-        
-      }else{
-        
-        X <- matrix(data = rnorm (n * p, mean = mean_X, sd = sd_X), ncol = p, nrow = n)
-        
-      }
-      
-    }	
-    
-    if(method == 'Denton-Cholette'){
-      
-      # Generate the high-frequency series according to a normal distribution with some random indicators.
-      
-      # Generate the purturbations. 
-      
-      e <- matrix(data = rnorm(n, mean = 0, sd = sd_e), ncol = 1) 
-      
-      # Generate the high-frequency series by y = X + e.
-      
-      y <- matrix(data = (X + e), ncol = 1) 
-      
-      # Beta = 1 for the Denton-Cholette method
-      
-      beta <- 1
-      
-    }else if(method == 'Chow-Lin'){
-      
-      # Generate the high-frequency series with autocorrelated errors according to a normal distribution with some random indicators.
-      
-      # Generate the autocorrelated purturbations with the autocorrelation coefficient rho.
-      
-      e <- matrix(data = 0, nrow = n)
-      
-      e[1] <- rnorm(1, mean = 0, sd = 1)/sqrt(1-rho^2)
-      
-      for(i in 2:nrow(e)){
-        
-        u <- rnorm(1, mean = 0, sd = 1)
-        
-        e[i] <- rho * e[i-1] + u 
-        
-      }
-      
-      # Generate the high-frequency series by y = XB + e.
-      
-      y <- matrix(data = (X %*% beta + e), ncol = 1) 
-      
-      
-      
-    }else if(method == 'Fernandez' || method == 'Litterman'){
-      
-      if(method == 'Fernandez'){
-        
-        rho <- 0
-        
-      }
-      
-      # Generate the high-frequency series with errors exhibiting random walk and potentially autocorrelated errors, according to a normal distribution with some random indicators.
-      
-      # Generate the random vector of coefficients for the DGP.
-      
-      # Generate the purturbations exhibiting a random walk model.
-      
-      e <- matrix(data = 0, nrow = n)
-      
-      u <- matrix(data = 0, nrow = n)
-      
-      e[1] <- rnorm(1, mean = 0, sd = 1)
-      
-      u[1] <- rnorm(1, mean = 0, sd = 1)/sqrt(1-rho^2)
-      
-      for(i in 2:nrow(e)){
-        
-        nu <- rnorm(1, mean = 0, sd = 1)
-        
-        u[i] <- rho * u[i-1] + nu
-        
-        e[i] <- e[i-1] + u[i]
-        
-      }
-      
-      # Generate the high-frequency series by y = XB + e.
-      
-      y <- matrix(data = (X %*% beta + e), ncol = 1) 
-      
-      
-    }
-    
-    
-    nfull = aggRatio*n_l
-    extr = n - nfull # number of extrapolations
-    
-    if(nfull > n) {
-      
-      stop("X does not have enough observations. \n")
-      
-    }
-    
-    
-    # Generate the aggregation matrix C
-    
-    if(aggMat == 'sum'){
-      
-      C <- kronecker(diag(n_l), matrix(data = 1, nrow = 1, ncol = aggRatio))
-      C <- cbind(C, matrix(0L, n_l, extr))
-      
-    }else if(aggMat == 'average'){
-      
-      C <- kronecker(diag(n_l), matrix(data = 1/aggRatio, nrow = 1, ncol = aggRatio))
-      C <- cbind(C, matrix(0L, n_l, extr))
-      
-    }else if(aggMat == 'first'){
-      
-      C <- kronecker(diag(n_l), matrix(data = c(1, rep(0, times = aggRatio-1)), nrow = 1, ncol = aggRatio))
-      C <- cbind(C, matrix(0L, n_l, extr))
-      
-    }else if(aggMat == 'last'){
-      
-      C <- kronecker(diag(n_l), matrix(data = c(rep(0, times = aggRatio-1), 1), nrow = 1, ncol = aggRatio))
-      C <- cbind(C, matrix(0L, n_l, extr))
-      
-    }
-    
-    Y = C %*% y
-    
-    
-    #Store the output
-    
-    data_list <- list(y, Y, X, beta, e)
-    names(data_list) <- c("y_Gen", "Y_Gen", "X_Gen", "Beta_Gen", "e_Gen")
-    
-    return(data_list)
-    
+  # Check if rho is valid
+  if(rho >= 1 || rho <= -1) {
+    stop("For the Chow-Lin method 'rho' must be between -1 and 1.")
   }
+
+  # Generate random vector of coefficients for the DGP
+  if(simul == TRUE){
+    w <- with_seed(setSeed, matrix(data = rbinom(n = p, size = 1, prob = 0.5), ncol = 1))
+  } else {
+    w <- matrix(data = rbinom(n = p, size = 1, prob = 0.5), ncol = 1)
+  }
+  
+  beta <- w * beta - (1 - w) * beta
+  
+  # Handle sparsity
+  if(sparse_option == "random") {
+    if(sparsity != 1) {
+      if(sparsity > 1) {
+        stop("The 'sparsity' input can only take values in (0,1].")
+      } else {
+        s <- round(sparsity * p)
+        if(simul == TRUE){
+          toReplace <- with_seed(setSeed, sample(p, size = s))
+        } else {
+          toReplace <- sample(p, size = s)
+        }
+        beta <- replace(beta, list = toReplace, values = 0)
+      }
+    }
+  } else if(is.numeric(sparse_option) && sparse_option == as.integer(sparse_option)) {
+    if(sparse_option > p) {
+      stop("The 'sparse_option' integer input should be less than or equal to 'p'.")
+    } else {
+      toReplace <- (length(beta) - sparse_option + 1):length(beta)
+      beta <- replace(beta, list = toReplace, values = 0)
+    }
+  } else {
+    stop("If 'sparse_option' is not 'random', it must be an integer.")
+  }
+  
+  # Generate X matrix based on the method
+  if(method == 'Denton-Cholette'){
+    if(p > 1){
+      stop("For the Denton-Cholette method, p must be 1.")
+    }
+    if(simul == TRUE){
+      X <- with_seed(setSeed, matrix(data = rnorm(n, mean = mean_X, sd = sd_X), ncol = 1))
+    } else {
+      X <- matrix(data = rnorm(n, mean = mean_X, sd = sd_X), ncol = 1)
+    }
+  } else {
+    if(simul == TRUE){
+      X <- with_seed(setSeed, matrix(data = rnorm(n * p, mean = mean_X, sd = sd_X), ncol = p, nrow = n))
+    } else {
+      X <- matrix(data = rnorm(n * p, mean = mean_X, sd = sd_X), ncol = p, nrow = n)
+    }
+  }
+  
+  # Generate residuals and high-frequency series based on the method
+  if(method == 'Denton-Cholette'){
+    e <- matrix(data = rnorm(n, mean = 0, sd = sd_e), ncol = 1)
+    y <- matrix(data = (X + e), ncol = 1)
+    beta <- 1
+  } else if(method == 'Chow-Lin'){
+    e <- matrix(data = 0, nrow = n)
+    e[1] <- rnorm(1, mean = 0, sd = 1)/sqrt(1 - rho^2)
+    for(i in 2:nrow(e)){
+      u <- rnorm(1, mean = 0, sd = 1)
+      e[i] <- rho * e[i-1] + u 
+    }
+    y <- matrix(data = (X %*% beta + e), ncol = 1) 
+  } else if(method == 'Fernandez' || method == 'Litterman'){
+    if(method == 'Fernandez'){
+      rho <- 0
+    }
+    e <- matrix(data = 0, nrow = n)
+    u <- matrix(data = 0, nrow = n)
+    e[1] <- rnorm(1, mean = 0, sd = 1)
+    u[1] <- rnorm(1, mean = 0, sd = 1)/sqrt(1 - rho^2)
+    for(i in 2:nrow(e)){
+      nu <- rnorm(1, mean = 0, sd = 1)
+      u[i] <- rho * u[i-1] + nu
+      e[i] <- e[i-1] + u[i]
+    }
+    y <- matrix(data = (X %*% beta + e), ncol = 1)
+  }
+  
+  # Check the number of full observations and generate the aggregation matrix
+  nfull <- aggRatio * n_l
+  extr <- n - nfull
+  
+  if(nfull > n) {
+    stop("X does not have enough observations.")
+  }
+  
+  if(aggMat == 'sum'){
+    C <- kronecker(diag(n_l), matrix(data = 1, nrow = 1, ncol = aggRatio))
+    C <- cbind(C, matrix(0L, n_l, extr))
+  } else if(aggMat == 'average'){
+    C <- kronecker(diag(n_l), matrix(data = 1/aggRatio, nrow = 1, ncol = aggRatio))
+    C <- cbind(C, matrix(0L, n_l, extr))
+  } else if(aggMat == 'first'){
+    C <- kronecker(diag(n_l), matrix(data = c(1, rep(0, times = aggRatio - 1)), nrow = 1, ncol = aggRatio))
+    C <- cbind(C, matrix(0L, n_l, extr))
+  } else if(aggMat == 'last'){
+    C <- kronecker(diag(n_l), matrix(data = c(rep(0, times = aggRatio - 1), 1), nrow = 1, ncol = aggRatio))
+    C <- cbind(C, matrix(0L, n_l, extr))
+  }
+  
+  Y <- C %*% y
+  
+  # Return the generated data
+  data_list <- list(y, Y, X, beta, e)
+  names(data_list) <- c("y_Gen", "Y_Gen", "X_Gen", "Beta_Gen", "e_Gen")
+  
+  return(data_list)
 }
