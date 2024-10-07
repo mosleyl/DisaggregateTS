@@ -1,49 +1,53 @@
-#' Function to calculate the BIC score from sparse temporal disaggregation.  
+#' BIC Score for Sparse Temporal Disaggregation
 #' 
-#' Used in \code\link{{disaggregation_rev}} to find estimates of the optimal \eqn{\rho} parameter. 
+#' This function calculates the BIC score for sparse temporal disaggregation, as described in 
+#' \insertCite{mosley2021sparse;textual}{TSdisaggregation}. It uses the LARS algorithm to find the 
+#' optimal beta coefficients and refits the models to compute BIC scores.
 #' 
-#' @param Y  		The low-frequency response series (\eqn{n_l \times 1} matrix).
-#' @param X  		The aggregated high-frequency indicator series (\eqn{n_l \times p} matrix).
-#' @param vcov Aggregated variance-covariance matrix of AR(\eqn{1}) residuals. 
-#' @keywords chow-lin litterman temporal disaggregation
+#' @param Y        The low-frequency response series (\eqn{n_l \times 1} matrix).
+#' @param X        The aggregated high-frequency indicator series (\eqn{n_l \times p} matrix).
+#' @param vcov     Aggregated variance-covariance matrix of AR(\eqn{1}) residuals (\eqn{n_l \times n_l} matrix).
+#' @return         The minimum BIC score from the refitted models.
+#' @keywords chow-lin litterman temporal disaggregation BIC
 #' @importFrom Rdpack reprompt	
 #' @importFrom stats lm rbinom rnorm
 
-
-sptd_BIC <- function(Y,X,vcov) {
+sptd_BIC <- function(Y, X, vcov) {
   
-  n_l = dim(Y)[1]
+  # Error handling: Ensure that Y, X, and vcov have compatible dimensions
+  n_l <- dim(Y)[1]
+  if (n_l != dim(X)[1]) stop("Y and X must have the same number of rows.")
+  if (n_l != dim(vcov)[1] || n_l != dim(vcov)[2]) stop("vcov must be a square matrix with dimensions matching Y.")
   
-  # Simplification and Cholesky factorization of the Sigma 
-  
+  # Cholesky factorization of the covariance matrix
   Uchol <- chol(vcov)
   Lchol <- t(Uchol)
   
-  # Preconditioning the variables
-  
+  # Precondition the variables
   X_F <- solve(Lchol) %*% X
   Y_F <- solve(Lchol) %*% Y
   
+  # Fit LARS algorithm to the preconditioned data
+  lars.fit <- lars(X_F, Y_F, intercept = FALSE, normalize = FALSE)
+  betamat <- lars.fit$beta
   
-  # Fit LARS algorithm to the data 
-  lars.fit <- lars(X_F, Y_F, intercept = F, normalize = F)
-  betamat <- lars.fit$beta 
+  # Limit the support size to n_l/2 to prevent overfitting
+  max_path <- k.index(betamat, n_l)
   
-  # Don't allow support to be bigger than n_l/2
-  npath <- k.index(betamat, n_l)
-  
-  # Find BIC for each re-fitted betahat 
+  # Initialize list for refitted beta values and BIC score array
   beta_refit <- list()
-  BIC <- c()
-  BIC[1] <- hdBIC(X_F, Y_F, vcov, betamat[1,])
-  beta_refit[[1]] <- betamat[1,]
+  BIC <- numeric(max_path)
   
-  for(lam in 2:npath) {
-    
+  # Compute BIC for the first model
+  BIC[1] <- hdBIC(X_F, Y_F, vcov, betamat[1, ])
+  beta_refit[[1]] <- betamat[1, ]
+  
+  # Loop through each lambda path to compute BIC for refitted beta values
+  for (lam in 2:max_path) {
     beta_refit[[lam]] <- refit(X_F, Y_F, betamat[lam, ])
     BIC[lam] <- hdBIC(X_F, Y_F, vcov, beta_refit[[lam]])
   }
   
+  # Return the minimum BIC value
   return(min(BIC))
-  
 }
