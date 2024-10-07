@@ -18,31 +18,40 @@
 #' 
 #' @export
 #' @keywords simulation diagnostics MSE sign recovery
-simulDiagnosis <- function(data_Hat, data_True, sgn = FALSE){
+simulDiagnosis <- function(data_Hat, data_True, sgn = FALSE) {
   
+  # Extract the true and estimated response vectors
   y_True <- data_True$y_Gen
   y_Hat  <- data_Hat$y_Est
   
-  if(length(y_True) != length(y_Hat)){
-    stop("The lengths of generated and estimated y differ!")
+  # Ensure that the lengths of the true and estimated response vectors are the same
+  if (length(y_True) != length(y_Hat)) {
+    stop("The lengths of 'y_Gen' (true response vector) and 'y_Est' (estimated response vector) differ!")
   }
   
-  # Compute the Mean Squared Error
+  # Compute the Mean Squared Error (MSE)
   MSE <- mean((y_True - y_Hat)^2)
   
-  if(sgn == FALSE){
+  if (sgn == FALSE) {
     return(MSE)
   } else {
     
+    # Extract the true and estimated coefficient vectors
     beta_True <- data_True$Beta_Gen
     beta_Hat  <- data_Hat$beta_Est
     
-    sgnBeta_True <- sign(beta_True)
-    sgnBeta_Hat  <- sign(beta_Hat)
+    # Ensure that the lengths of the true and estimated coefficient vectors are the same
+    if (length(beta_True) != length(beta_Hat)) {
+      stop("The lengths of 'Beta_Gen' (true coefficient vector) and 'beta_Est' (estimated coefficient vector) differ!")
+    }
+    
+    # Calculate the signs of the true and estimated coefficients
+    beta_True_signs <- sign(beta_True)
+    beta_Hat_signs  <- sign(beta_Hat)
     
     # Calculate the correct sign recovery percentage
-    correct_signs <- sum(sgnBeta_True == sgnBeta_Hat)
-    total_signs <- length(sgnBeta_True)
+    correct_signs <- sum(beta_True_signs == beta_Hat_signs)
+    total_signs <- length(beta_True_signs)
     
     sign_recovery_percentage <- (correct_signs / total_signs) * 100
     
