@@ -1,11 +1,11 @@
 #' Function to generate an ARIMA(1,1,0) variance-covariance matrix for the Litterman method with parameter \eqn{\rho} such that \eqn{\lvert \rho \rvert < 1}.
 #'  
-#' @param rho Numeric value representing the autocorrelation parameter. Must satisfy |rho| < 1.
-#' @param n Integer representing the size of the matrix (n x n).
+#' @param rho Numeric value representing the autocorrelation parameter. Must satisfy \eqn{\lvert \rho \rvert < 1}.
+#' @param n Integer representing the size of the matrix \eqn{(n x n)}.
 #' @keywords internal 
 #' @importFrom Rdpack reprompt
 #' @importFrom stats lm rbinom rnorm
-#' @return A variance-covariance matrix of size n x n for the ARIMA(1,1,0) process, used in the Litterman method.
+#' @return A variance-covariance matrix of size \eqn{(n x n)} for the ARIMA(1,1,0) process, used in the Litterman method.
 
 ARcov_lit <- function(rho, n) {
 
