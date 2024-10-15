@@ -5,7 +5,7 @@
 #' @keywords internal 
 #' @importFrom Rdpack reprompt
 #' @importFrom stats lm rbinom rnorm
-#' @return A variance-covariance matrix of size n x n based on the AR(1) process.
+#' @return A variance-covariance matrix of size \eqn{(n x n)} based on the AR(1) process.
 
 ARcov <- function(rho, n) {
   
