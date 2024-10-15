@@ -1,6 +1,6 @@
 #' Function to generate an AR(1) variance-covariance matrix with parameter rho s.t. \eqn{\lvert \rho\rvert  < 1}. 
 #'  
-#' @param rho Numeric value representing the autocorrelation parameter. Must satisfy |rho| < 1.
+#' @param rho Numeric value representing the autocorrelation parameter. Must satisfy \eqn{\lvert \rho\rvert  < 1}.
 #' @param n Integer representing the size of the matrix (n x n).
 #' @keywords internal 
 #' @importFrom Rdpack reprompt
