@@ -1,11 +1,11 @@
 #' Function to generate an AR(1) variance-covariance matrix with parameter rho s.t. \eqn{\lvert \rho\rvert  < 1}. 
 #'  
-#' @param rho Numeric value representing the autocorrelation parameter. Must satisfy \eqn{\lvert \rho\rvert  < 1}.
-#' @param n Integer representing the size of the matrix \eqn{(n x n)}.
+#' @param rho Numeric value representing the autocorrelation parameter. Must satisfy |rho| < 1.
+#' @param n Integer representing the size of the matrix (n x n).
 #' @keywords internal 
 #' @importFrom Rdpack reprompt
 #' @importFrom stats lm rbinom rnorm
-#' @return A variance-covariance matrix of size \eqn{(n x n)} based on the AR(1) process.
+#' @return A variance-covariance matrix of size n x n based on the AR(1) process.
 
 ARcov <- function(rho, n) {
   
